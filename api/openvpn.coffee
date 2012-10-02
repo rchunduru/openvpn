@@ -2,7 +2,7 @@
 validate = require('json-schema').validate
 cfile = new require 'fileops'
 @include = ->
-    vpnlib = require './vpnlib'
+    vpnlib = require 'openvpn'
 
     @post '/openvpn/client': ->
         vpn = new vpnlib @request, @send, @params, @body, @next

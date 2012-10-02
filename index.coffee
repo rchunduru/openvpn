@@ -1,1 +1,1 @@
-module.exports = require './lib/openvpn'
+module.exports = require './lib/vpnlib'
