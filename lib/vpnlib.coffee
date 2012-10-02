@@ -1,5 +1,5 @@
 # validation is used by other modules
-fileops = require './fileops.coffee'
+fileops = require 'fileops'
 validate = require('json-schema').validate
 exec = require('child_process').exec
 
@@ -114,6 +114,7 @@ serverSchema =
 class vpnlib
     constructor: (@request, @send, @params, @body, @next) ->
         console.log 'vpnlib initialized'
+        @params.id = 'openvpn'
         console.log @params
 
 

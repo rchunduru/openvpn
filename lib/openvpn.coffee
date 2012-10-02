@@ -1,6 +1,6 @@
 # validation is used by other modules
 validate = require('json-schema').validate
-cfile = new require './fileops.coffee'
+cfile = new require 'fileops'
 @include = ->
     vpnlib = require './vpnlib'
 
