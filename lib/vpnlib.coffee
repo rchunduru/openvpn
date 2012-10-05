@@ -54,14 +54,14 @@ clientSchema =
         verb: {"type":"number", "required":false}
         mlock: {"type":"boolean", "required":false}
 
-userschema = userschema =
+userSchema =
         name: "openvpn"
         type: "object"
         additionalProperties: false
         properties:
             id:    { type: "string", required: true }
             email: { type: "string", required: false}
-            commonname: { type: "string", required: false}
+            cname: { type: "string", required: false}
             push:
                 items: { type: "string" }
 
@@ -112,34 +112,29 @@ serverSchema =
             
 
 class vpnlib
-    constructor: (@request, @send, @params, @body, @next) ->
+    constructor:  ->
         console.log 'vpnlib initialized'
-        @params.id = 'openvpn'
-        console.log @params
 
+    getCcdPath: (id) ->
+        entry = db.main.get id
+        console.log 'client config dir is ' + entry.client-config-dir
+        return entry.client-config-dir
 
-    validateOpenvpn: (schema, callback) ->
-        console.log 'performing schema validation on incoming OpenVPN JSON'
-        result = validate @body, schema
-        console.log result
-        callback (result)
+    getMgmtPort: (id) ->
+        entry = db.main.get id
+        console.log 'management ip port is ' + entry.management
+        port = entry.management.split(" ")
+        return port[1]
 
-    validateOpenvpnClient: ->
-        @validateOpenvpn clientSchema, (result) ->
-            return new Error "Invalid service openvpn posting!: #{result.errors}" unless result.valid
-            return result.valid
+    getStatusFile: (id) ->
+        entry = db.main.get id
+        console.log 'status file is ' + entry.status
+        return entry.status
 
-    validateOpenvpnServer: ->
-        console.log 'ravi in validate openvpn server'
-        @validateOpenvpn serverSchema, (result) ->
-            return new Error "Invalid service openvpn posting!: #{result.errors}" unless result.valid
-            return result.valid
-
-
-    configurevpn: (filename, callback) ->
+    configvpn: (body, id, filename, callback) ->
         service = "openvpn"
         config = ''
-        for key, val of @body
+        for key, val of body
             switch (typeof val)
                 when "object"
                     if val instanceof Array
@@ -150,59 +145,33 @@ class vpnlib
                     config += key + ' ' + val + "\n"
                 when "boolean"
                     config += key + "\n"
-        id = @params.id
 
-        #filename = __dirname+'/services/'+varguid+'/openvpn/server.conf'
         fileops.createFile filename, (result) ->
             return new Error "Unable to create configuration file #{filename}!" if result instanceof Error
             fileops.updateFile filename, config
             exec "touch /config/#{service}/on"
             try
-                db.main.set id, @body, ->
+                db.main.set id, body, ->
                     console.log "#{id} added to OpenVPN service configuration"
                 callback({result:true})
             catch err
                 console.log err
                 callback(err)
 
-    configClient: (filename, callback) ->
-        if filename == ''
-            filename = "/config/openvpn/client.conf"
-        @configurevpn filename , (res) ->
-            console.log res
-            callback(res)
    
-    configServer: (callback) ->
-        console.log 'config server'
-        @configurevpn "/config/openvpn/server.conf", (res) ->
-            console.log 'ravi in configserver'
-            console.log res
-            callback(res)
-   
-    validateUser: ->
-        console.log 'performing schema validation on incoming user validation JSON'
-        result = validate @body, userschema
-        console.log result
-        return new Error "Invalid service openvpn posting!: #{result.errors}" unless result.valid
-        return result.valid
 
-    addUser: (callback) ->
+    addUser: (body, filename, callback) ->
         service = "openvpn"
         config = ''
-        for key, val of @body
+        for key, val of body
             switch (typeof val)
                 when "object"
                     if val instanceof Array
                         for i in val
                             config += "#{key} #{i}\n" if key is "iroute"
                             config += "#{key} \"#{i}\"\n" if key is "push"
-        if @body.email
-            filename = "/config/openvpn/ccd/#{@body.email}"
-        else
-            filename = "/config/openvpn/ccd/#{@body.commonname}"
 
-        id = @body.id
-        body = @body
+        id = body.id
         fileops.createFile filename, (err) ->
             return new Error "Unable to create configuration file #{filename}!" if err instanceof Error
             fileops.updateFile filename, config
@@ -219,11 +188,20 @@ class vpnlib
             catch err
                 callback(err)
 
-    delUser: (callback) ->
-        console.log @params
-        userid = @params.user
-        entry = db.user.get userid
+    delInstance: (id, callback) ->
+        entry = db.main.get id
 
+        #spawnvpn takes care of killing openvpn instance.
+        #To keep it generic, we need to call service module to stop this process
+        #service module should have mapping with id to process id
+
+        db.main.rm id, ->
+            console.log "removed VPN client ID: #{id}"
+        callback({deleted:true})
+
+
+    delUser: (userid, ccdpath, callback) ->
+        entry = db.user.get userid
 
         try
             throw new Error "user does not exist!" unless entry
@@ -231,7 +209,7 @@ class vpnlib
                 file = entry.email
             else
                 file = entry.commonname
-            filename = "/config/openvpn/ccd/#{file}"
+            filename = "#{ccdpath}" + "/#{file}"
             console.log "removing user config on #{filename}..."
             fileops.fileExists filename, (exists) ->
                 if not exists
@@ -352,3 +330,6 @@ class vpnlib
                 status.emit 'end'
 
 module.exports = vpnlib
+module.exports.clientSchema = clientSchema
+module.exports.serverSchema = serverSchema
+module.exports.userSchema = userSchema
