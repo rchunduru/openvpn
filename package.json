@@ -2,7 +2,6 @@
   "name": "openvpn",
   "version": "0.1.3",
   "dependencies": {
-    "zappajs":"0.3.x",
     "fileops":"0.1.3",
     "json-schema": "0.2.0",
     "dirty":"0.9.x",
@@ -18,14 +17,11 @@
   "description": "openvpn is a easy to use module that exposes endpoints to configure openvpn on any linux system",
   "repository": {
     "type": "git",
-    "url": "git://github.com/clearpath-networks/openvpn.git"
+    "url": "git://github.com/rchunduru/openvpn.git"
   },
   "keywords": ["openvpn", "vpn"],
-  "main": "./lib/vpnlib.coffee",
+  "main": "./lib/openvpn.coffee",
   "contributors": [
-	  "Peter.K.Lee <plee@clearpathnet.com",
-          "Badri Narayanan <badrinarayananb@calsoftlabs.com",
-	  "Geetha R <geethar@calsoftlabs.com"
    ]
 
 }
